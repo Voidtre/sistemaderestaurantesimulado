@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Caixa</title>
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --surface-color: #ffffff;
+            --text-color: #111827;
+            --primary-color: #2563eb;
+            --primary-text: #ffffff;
+            --border-color: #d1d5db;
+            --mesa-livre: #10b981;
+            --mesa-ocupada: #f97316;
+            --mesa-pagamento: #ef4444;
+            --shadow: 0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px 0 rgba(0,0,0,0.06);
+        }
+
+        body.dark-mode {
+            --bg-color: #111827;
+            --surface-color: #1f2937;
+            --text-color: #d1d5db;
+            --primary-color: #3b82f6;
+            --primary-text: #ffffff;
+            --border-color: #4b5563;
+            --mesa-livre: #10b981;
+            --mesa-ocupada: #f97316;
+            --mesa-pagamento: #ef4444;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .app-container { max-width: 1200px; margin: auto; padding: 1rem; }
+        .page { display: none; }
+        .page.active { display: block; }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        .header h1 { font-size: 1.75rem; }
+
+        #theme-toggle {
+            background: none; border: none; cursor: pointer; font-size: 1.5rem; color: var(--text-color);
+        }
+
+        /* Dashboard de Mesas */
+        .mesas-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 1.5rem;
+        }
+        .mesa {
+            padding: 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: var(--shadow);
+            border-top: 4px solid;
+            background-color: var(--surface-color);
+        }
+        .mesa:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+        .mesa.livre { border-color: var(--mesa-livre); }
+        .mesa.ocupada { border-color: var(--mesa-ocupada); }
+        .mesa.pagamento { border-color: var(--mesa-pagamento); }
+
+        .mesa-numero { font-size: 1.5rem; font-weight: bold; }
+        .mesa-status { font-size: 0.8rem; text-transform: uppercase; font-weight: 600; }
+        .status-livre { color: var(--mesa-livre); }
+        .status-ocupada { color: var(--mesa-ocupada); }
+        .status-pagamento { color: var(--mesa-pagamento); }
+        .mesa-total { font-size: 1.1rem; margin-top: 0.5rem; }
+
+        /* Modal de Fechamento */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0,0,0,0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        .modal-overlay.visible { opacity: 1; visibility: visible; }
+
+        .modal-content {
+            background-color: var(--surface-color);
+            padding: 2rem;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            transform: scale(0.95);
+            transition: transform 0.3s;
+        }
+        .modal-overlay.visible .modal-content { transform: scale(1); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .close-modal { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-color); }
+        
+        .conta-resumo { max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; }
+        .conta-item { display: flex; justify-content: space-between; padding: 0.5rem 0; }
+        .conta-total { text-align: right; font-size: 1.5rem; font-weight: bold; margin-top: 1rem; }
+
+        .payment-options { margin-top: 1.5rem; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+        .payment-btn {
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            background-color: var(--surface-color);
+            color: var(--text-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .payment-btn:hover { background-color: var(--primary-color); color: var(--primary-text); }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <!-- PÁGINA DASHBOARD DE MESAS -->
+    <div id="page-dashboard" class="page active">
+        <header class="header">
+            <h1>Dashboard do Caixa</h1>
+            <button id="theme-toggle">🌙</button>
+        </header>
+        <div id="mesas-grid-caixa" class="mesas-grid">
+            <!-- Mesas geradas pelo JS -->
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DE FECHAMENTO DE CONTA -->
+<div id="modal-fechamento" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modal-mesa-numero">Mesa X</h2>
+            <button class="close-modal">&times;</button>
+        </div>
+        <div class="conta-resumo" id="modal-conta-resumo">
+            <!-- Detalhes da conta -->
+        </div>
+        <div class="conta-total" id="modal-conta-total">
+            Total: R$ 0,00
+        </div>
+        <div class="payment-options">
+            <button class="payment-btn" data-method="dinheiro">💵 Dinheiro</button>
+            <button class="payment-btn" data-method="cartao">💳 Cartão</button>
+            <button class="payment-btn" data-method="pix">✨ Pix</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const mesasGrid = document.getElementById('mesas-grid-caixa');
+        const themeToggle = document.getElementById('theme-toggle');
+        const modal = document.getElementById('modal-fechamento');
+        const closeModalBtn = document.querySelector('.close-modal');
+
+        // Dados Fictícios - Em um app real, viriam do backend
+        let mesasState = {};
+        function gerarDadosFicticios() {
+            for (let i = 1; i <= 50; i++) {
+                const rand = Math.random();
+                if (rand < 0.4) { // 40% de chance de estar ocupada
+                    mesasState[i] = {
+                        status: 'ocupada',
+                        pedidos: [
+                            { nome: 'Picanha na Chapa', qnt: 1, preco: 89.90 },
+                            { nome: 'Coca-Cola 600ml', qnt: 2, preco: 8.00 },
+                        ]
+                    };
+                } else {
+                    mesasState[i] = { status: 'livre', pedidos: [] };
+                }
+            }
+        }
+
+        function calcularTotal(pedidos) {
+            return pedidos.reduce((acc, item) => acc + (item.preco * item.qnt), 0);
+        }
+
+        function renderMesas() {
+            mesasGrid.innerHTML = '';
+            for (let i = 1; i <= 50; i++) {
+                const mesa = mesasState[i];
+                const total = calcularTotal(mesa.pedidos);
+                const statusClass = `status-${mesa.status}`;
+                
+                mesasGrid.innerHTML += `
+                    <div class="mesa ${mesa.status}" data-numero="${i}">
+                        <div class="mesa-numero">Mesa ${i}</div>
+                        <div class="mesa-status ${statusClass}">${mesa.status}</div>
+                        <div class="mesa-total">${mesa.status !== 'livre' ? `R$ ${total.toFixed(2).replace('.', ',')}` : '-'}</div>
+                    </div>
+                `;
+            }
+        }
+        
+        function abrirModalFechamento(numeroMesa) {
+            const mesa = mesasState[numeroMesa];
+            if (mesa.status === 'livre') return;
+
+            document.getElementById('modal-mesa-numero').textContent = `Fechar Mesa ${numeroMesa}`;
+            
+            const resumoContainer = document.getElementById('modal-conta-resumo');
+            resumoContainer.innerHTML = '';
+            mesa.pedidos.forEach(item => {
+                resumoContainer.innerHTML += `
+                    <div class="conta-item">
+                        <span>${item.qnt}x ${item.nome}</span>
+                        <span>R$ ${(item.preco * item.qnt).toFixed(2).replace('.', ',')}</span>
+                    </div>
+                `;
+            });
+
+            const total = calcularTotal(mesa.pedidos);
+            document.getElementById('modal-conta-total').textContent = `Total: R$ ${total.toFixed(2).replace('.', ',')}`;
+            
+            modal.dataset.mesa = numeroMesa;
+            modal.classList.add('visible');
+        }
+
+        function fecharModal() {
+            modal.classList.remove('visible');
+        }
+
+        function processarPagamento(numeroMesa, metodo) {
+             const total = calcularTotal(mesasState[numeroMesa].pedidos);
+             alert(`(Simulação) Mesa ${numeroMesa} paga com ${metodo}.\nTotal: R$ ${total.toFixed(2)}.\nEnviando para a impressora fiscal...`);
+             
+             // Limpar a mesa
+             mesasState[numeroMesa] = { status: 'livre', pedidos: [] };
+             
+             fecharModal();
+             renderMesas();
+        }
+
+        // Event Listeners
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            themeToggle.textContent = document.body.classList.contains('dark-mode') ? '☀️' : '🌙';
+        });
+
+        mesasGrid.addEventListener('click', (e) => {
+            const mesaEl = e.target.closest('.mesa');
+            if (mesaEl) {
+                abrirModalFechamento(mesaEl.dataset.numero);
+            }
+        });
+
+        closeModalBtn.addEventListener('click', fecharModal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                fecharModal();
+            }
+        });
+        
+        document.querySelector('.payment-options').addEventListener('click', e => {
+            if(e.target.classList.contains('payment-btn')) {
+                const metodo = e.target.dataset.method;
+                const numeroMesa = modal.dataset.mesa;
+                processarPagamento(numeroMesa, metodo);
+            }
+        });
+
+        // Inicialização
+        gerarDadosFicticios();
+        renderMesas();
+    });
+</script>
+
+</body>
+</html>

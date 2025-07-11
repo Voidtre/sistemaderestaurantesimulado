@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comanda Eletrônica</title>
+    <style>
+        :root {
+            --bg-color: #f4f7fa;
+            --surface-color: #ffffff;
+            --text-color: #1a202c;
+            --primary-color: #3498db;
+            --primary-text: #ffffff;
+            --border-color: #e2e8f0;
+            --mesa-livre: #2ecc71;
+            --mesa-ocupada: #e67e22;
+            --shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+        }
+
+        body.dark-mode {
+            --bg-color: #1a202c;
+            --surface-color: #2d3748;
+            --text-color: #e2e8f0;
+            --primary-color: #4299e1;
+            --primary-text: #1a202c;
+            --border-color: #4a5568;
+            --mesa-livre: #27ae60;
+            --mesa-ocupada: #d35400;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .app-container { max-width: 500px; margin: auto; }
+        .page { display: none; }
+        .page.active { display: block; }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background-color: var(--surface-color);
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .header h1 { font-size: 1.25rem; }
+
+        #theme-toggle {
+            background: none; border: none; cursor: pointer; font-size: 1.5rem; color: var(--text-color);
+        }
+
+        /* Mapa de Mesas */
+        .mesas-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 1rem;
+            padding: 1rem;
+        }
+        .mesa {
+            aspect-ratio: 1 / 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            box-shadow: var(--shadow);
+        }
+        .mesa:hover { transform: scale(1.05); }
+        .mesa.livre { background-color: var(--mesa-livre); color: #fff; }
+        .mesa.ocupada { background-color: var(--mesa-ocupada); color: #fff; }
+
+        /* Tela de Pedido */
+        .pedido-header {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            background-color: var(--surface-color);
+        }
+        .back-button {
+            background: none; border: none; font-size: 1.5rem; color: var(--text-color); cursor: pointer; margin-right: 1rem;
+        }
+
+        .menu-categorias {
+            display: flex;
+            gap: 0.5rem;
+            padding: 1rem;
+            overflow-x: auto;
+        }
+        .categoria-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border-color);
+            background-color: var(--surface-color);
+            color: var(--text-color);
+            border-radius: 20px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .categoria-btn.active {
+            background-color: var(--primary-color);
+            color: var(--primary-text);
+            border-color: var(--primary-color);
+        }
+
+        .menu-itens .item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            background-color: var(--surface-color);
+        }
+        .item-info h3 { font-size: 1rem; }
+        .item-info p { font-size: 0.875rem; opacity: 0.7; }
+        .add-btn {
+            background-color: var(--primary-color); color: var(--primary-text);
+            border: none; border-radius: 50%; width: 36px; height: 36px;
+            font-size: 1.5rem; cursor: pointer;
+        }
+        
+        .carrinho {
+            padding: 1rem;
+            background-color: var(--bg-color);
+        }
+        .carrinho-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--surface-color);
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+        .carrinho-item-info { flex-grow: 1; }
+        .quantidade-controls { display: flex; align-items: center; gap: 0.75rem; }
+        .qnt-btn { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border-color); background: none; color: var(--text-color); cursor: pointer; }
+        
+        textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background-color: var(--surface-color);
+            color: var(--text-color);
+            margin-top: 1rem;
+        }
+
+        .footer-actions {
+            position: sticky; bottom: 0;
+            padding: 1rem; background-color: var(--surface-color);
+            border-top: 1px solid var(--border-color);
+        }
+        .btn-enviar {
+            width: 100%;
+            padding: 1rem;
+            background-color: var(--mesa-livre);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <!-- PÁGINA MAPA DE MESAS -->
+    <div id="page-mesas" class="page active">
+        <header class="header">
+            <h1>Mesas</h1>
+            <button id="theme-toggle">🌙</button>
+        </header>
+        <div id="mesas-grid" class="mesas-grid">
+            <!-- Mesas serão geradas pelo JavaScript -->
+        </div>
+    </div>
+
+    <!-- PÁGINA DE PEDIDO -->
+    <div id="page-pedido" class="page">
+        <header class="pedido-header">
+            <button class="back-button">←</button>
+            <h1 id="numero-mesa">Mesa X</h1>
+        </header>
+        <main>
+            <div class="menu-categorias">
+                <button class="categoria-btn active" data-categoria="pratos">Pratos</button>
+                <button class="categoria-btn" data-categoria="bebidas">Bebidas</button>
+                <button class="categoria-btn" data-categoria="sobremesas">Sobremesas</button>
+            </div>
+            
+            <div id="menu-itens" class="menu-itens">
+                <!-- Itens do menu serão gerados aqui -->
+            </div>
+
+            <div class="carrinho">
+                <h2>Pedido Atual</h2>
+                <div id="carrinho-lista"></div>
+                <textarea placeholder="Observações do pedido (ex: sem cebola, ponto da carne...)"></textarea>
+            </div>
+        </main>
+        <footer class="footer-actions">
+            <button class="btn-enviar">✔️ Enviar Pedido para Cozinha</button>
+        </footer>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const pageMesas = document.getElementById('page-mesas');
+        const pagePedido = document.getElementById('page-pedido');
+        const mesasGrid = document.getElementById('mesas-grid');
+        const themeToggle = document.getElementById('theme-toggle');
+
+        const mesasState = {};
+
+        // Dados Fictícios
+        const menu = {
+            pratos: [
+                { id: 1, nome: 'Picanha na Chapa', preco: 89.90 },
+                { id: 2, nome: 'Frango a Parmegiana', preco: 45.50 },
+                { id: 3, nome: 'Moqueca de Peixe', preco: 75.00 },
+            ],
+            bebidas: [
+                { id: 4, nome: 'Coca-Cola 600ml', preco: 8.00 },
+                { id: 5, nome: 'Suco de Laranja 500ml', preco: 9.50 },
+                { id: 6, nome: 'Água com Gás', preco: 5.00 },
+            ],
+            sobremesas: [
+                { id: 7, nome: 'Pudim de Leite', preco: 12.00 },
+                { id: 8, nome: 'Mousse de Maracujá', preco: 10.00 },
+            ]
+        };
+        let carrinhoAtual = {};
+
+        // Funções de Navegação
+        function goToPage(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+        }
+
+        function abrirPedido(numeroMesa) {
+            document.getElementById('numero-mesa').textContent = `Mesa ${numeroMesa}`;
+            mesasState[numeroMesa] = 'ocupada';
+            carrinhoAtual = {};
+            renderCarrinho();
+            renderMenu('pratos');
+            document.querySelector('.categoria-btn.active').classList.remove('active');
+            document.querySelector('.categoria-btn[data-categoria="pratos"]').classList.add('active');
+            goToPage('page-pedido');
+        }
+
+        // Renderização
+        function renderMesas() {
+            mesasGrid.innerHTML = '';
+            for (let i = 1; i <= 50; i++) {
+                const status = mesasState[i] || 'livre';
+                const mesaEl = document.createElement('div');
+                mesaEl.className = `mesa ${status}`;
+                mesaEl.textContent = i;
+                mesaEl.dataset.numero = i;
+                mesaEl.addEventListener('click', () => abrirPedido(i));
+                mesasGrid.appendChild(mesaEl);
+            }
+        }
+        
+        function renderMenu(categoria) {
+            const menuItensContainer = document.getElementById('menu-itens');
+            menuItensContainer.innerHTML = '';
+            menu[categoria].forEach(item => {
+                menuItensContainer.innerHTML += `
+                    <div class="item">
+                        <div class="item-info">
+                            <h3>${item.nome}</h3>
+                            <p>R$ ${item.preco.toFixed(2).replace('.', ',')}</p>
+                        </div>
+                        <button class="add-btn" data-id="${item.id}" data-nome="${item.nome}" data-preco="${item.preco}">+</button>
+                    </div>
+                `;
+            });
+        }
+        
+        function renderCarrinho() {
+            const carrinhoLista = document.getElementById('carrinho-lista');
+            carrinhoLista.innerHTML = '';
+            if (Object.keys(carrinhoAtual).length === 0) {
+                carrinhoLista.innerHTML = '<p style="text-align:center; opacity:0.7;">Carrinho vazio</p>';
+                return;
+            }
+            for(const id in carrinhoAtual) {
+                const item = carrinhoAtual[id];
+                carrinhoLista.innerHTML += `
+                    <div class="carrinho-item">
+                        <div class="carrinho-item-info">
+                            <strong>${item.nome}</strong>
+                        </div>
+                        <div class="quantidade-controls">
+                            <button class="qnt-btn" data-id="${id}" data-op="-">-</button>
+                            <span>${item.qnt}</span>
+                            <button class="qnt-btn" data-id="${id}" data-op="+">+</button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // Lógica do Pedido
+        function addItemAoCarrinho(item) {
+            if (carrinhoAtual[item.id]) {
+                carrinhoAtual[item.id].qnt++;
+            } else {
+                carrinhoAtual[item.id] = { nome: item.nome, preco: item.preco, qnt: 1 };
+            }
+            renderCarrinho();
+        }
+
+        function updateQuantidade(id, operacao) {
+            if (!carrinhoAtual[id]) return;
+            if (operacao === '+') {
+                carrinhoAtual[id].qnt++;
+            } else if (operacao === '-') {
+                carrinhoAtual[id].qnt--;
+                if (carrinhoAtual[id].qnt <= 0) {
+                    delete carrinhoAtual[id];
+                }
+            }
+            renderCarrinho();
+        }
+
+        // Event Listeners
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            themeToggle.textContent = document.body.classList.contains('dark-mode') ? '☀️' : '🌙';
+        });
+
+        document.querySelector('.back-button').addEventListener('click', () => {
+            renderMesas();
+            goToPage('page-mesas');
+        });
+
+        document.querySelector('.menu-categorias').addEventListener('click', (e) => {
+            if (e.target.classList.contains('categoria-btn')) {
+                document.querySelector('.categoria-btn.active').classList.remove('active');
+                e.target.classList.add('active');
+                renderMenu(e.target.dataset.categoria);
+            }
+        });
+
+        document.getElementById('menu-itens').addEventListener('click', e => {
+            if (e.target.classList.contains('add-btn')) {
+                addItemAoCarrinho(e.target.dataset);
+            }
+        });
+        
+        document.getElementById('carrinho-lista').addEventListener('click', e => {
+            if(e.target.classList.contains('qnt-btn')) {
+                updateQuantidade(e.target.dataset.id, e.target.dataset.op);
+            }
+        });
+
+        document.querySelector('.btn-enviar').addEventListener('click', () => {
+            // Em um app real, aqui você enviaria os dados para o backend.
+            alert('Pedido enviado com sucesso! (Simulação)');
+            renderMesas();
+            goToPage('page-mesas');
+        });
+
+        // Inicialização
+        renderMesas();
+    });
+</script>
+
+</body>
+</html>
